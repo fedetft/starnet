@@ -17,7 +17,8 @@ SUBDIRS := $(KPATH)
 ## List here your source files (both .s, .c and .cpp)
 ##
 SRC :=                                  \
-main.cpp
+main.cpp starnet/libs/flopsync2.cpp starnet/libs/aes.c \
+starnet/drivers/platform.cpp starnet/drivers/rfm69.cpp
 
 ##
 ## List here additional static libraries with relative path

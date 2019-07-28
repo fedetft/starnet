@@ -43,7 +43,7 @@
 #OPT_BOARD := stm32h753xi_eval
 #OPT_BOARD := stm32f407vg_thermal_test_chip
 #OPT_BOARD := stm32f205_generic
-#OPT_BOARD := stm32f103cx_generic
+OPT_BOARD := stm32f103cx_generic
 #OPT_BOARD := stm32f072rb_stm32f0discovery
 
 ##
@@ -63,7 +63,7 @@ OPT_OPTIMIZATION := -O2
 ## implicitly uses it) uncomment this option.
 ## the -D__NO_EXCEPTIONS is used by Miosix to know if exceptions are used.
 ##
-#OPT_EXCEPT := -fno-exceptions -fno-rtti -D__NO_EXCEPTIONS
+OPT_EXCEPT := -fno-exceptions -fno-rtti -D__NO_EXCEPTIONS
 
 #############################################################################
 ## Board specific options
