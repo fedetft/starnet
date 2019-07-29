@@ -257,7 +257,11 @@ Rfm69::Rfm69() : platform(Platform::instance())
     writeReg(0x1a,0x8b);        //AfcBw       (recomended)
     writeReg(0x25,0x00);        //DioMapping1=DIO0:PacketSent
     writeReg(0x26,0x07);        //DioMapping2 (recomended)
-    writeReg(0x29,0xe4);        //RssiThresh  (recomended)      
+#ifdef RFM69_RECV_USE_RSSI
+    writeReg(0x29,90*2);        //-90dBm, below -95dBm cause spurious triggers
+#else //RFM69_RECV_USE_RSSI
+    writeReg(0x29,0xe4);        //RssiThresh  (recomended)
+#endif //RFM69_RECV_USE_RSSI
     writeReg(0x2e,0x80 | 1<<3); //SyncConfig=SyncOn | 2 byte sync word (netId)
     setNetworkId(0x0101);       //Default netId
     writeReg(0x37,0x98);        //PacketConfig1=variable length, crc on, no nodeId

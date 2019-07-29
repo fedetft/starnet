@@ -40,7 +40,11 @@
 #define RFM69_USE_PA1
 
 // Enable high sensitivity RX, may saturate if nodes are too close
-#define RFM69_HI_SENSITIVITY_RX
+//#define RFM69_HI_SENSITIVITY_RX
+
+// Use a conservative RSSI threshold to return timeout early in recv, saving
+// power at the expense of sensitivity
+#define RFM69_RECV_USE_RSSI
 
 //Forward decls
 class Platform;
