@@ -1,24 +1,33 @@
 
 #include <cstdio>
-#include "miosix.h"
-#include "starnet/drivers/platform.h"
-#include "starnet/drivers/transceiver.h"
+#include "starnet/starnet.h"
 
-using namespace std;
-using namespace miosix;
+const unsigned char key[AES_KEYLEN]={0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5};
+StarNet starNet(
+    milliseconds(1000),// slotDurationNs
+    seconds(30),       // syncPeriodNs
+    10,                // maxNumNodes
+    0x1234,            // netId
+    key,               // key
+    34,                // channel
+    0                  // nodeId
+);
+
+void onPacketReceived(ReceivedPacket rp)
+{
+    iprintf("packet received sender=%d len=%d rssi=%ddBm\n",
+            rp.sender,rp.length,rp.rssi);
+}
+
+void periodicCallback()
+{
+    puts("---");
+}
 
 int main()
 {
-    auto& platform=Platform::instance();
-    auto& rtx=Transceiver::instance();
-    rtx.setChannel(34);
-    rtx.setNetworkId(0x0101);
-    
-    for(;;)
-    {
-        const unsigned char data[]={1,2,3,4};
-        rtx.sendNow(data,sizeof(data));
-        iprintf("Packet transmitted\n");
-        platform.sleep(1000000000); //1s
-    }
+    starNet.subscribe(1);
+    starNet.setPacketReceivedCallback(onPacketReceived);
+    starNet.setPeriodicCallback(periodicCallback);
+    starNet.run();
 }
