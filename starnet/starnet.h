@@ -144,6 +144,15 @@ public:
     void setPacketSentCallback(std::function<void ()> cb) { onSent=cb; }
     
     /**
+     * This is a low-level callback mainly intended to blink an LED to indicate
+     * the protocol operation. This callback is called with true parameter on
+     * entering a send or recv call, and with false on exiting.
+     * NOTE: The code in this callback must take no more than a few microseconds
+     * otherwise the time slots will be missed and the protocol will not work.
+     */
+    void setSendRecvCallback(std::function<void (bool)> cb) { onSendRecv=cb; }
+    
+    /**
      * Register a packet to be sent. The packet is not sent immediately,
      * but when it is this node's turn.
      * \param packet packet bytes, that is copied in an internal buffer
@@ -315,6 +324,7 @@ private:
     std::function<void ()> onPeriodic;
     std::function<void (const ReceivedPacket)> onReceived;
     std::function<void ()> onSent;
+    std::function<void (bool)> onSendRecv;
     
     Platform& platform;
     Transceiver& rtx;

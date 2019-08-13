@@ -247,7 +247,9 @@ void StarNet::send()
     if(deepSleep==0)
         platform.absoluteDeepSleep(currentSlotTime-Transceiver::txAdvance);
     else platform.absoluteSleep(currentSlotTime-Transceiver::txAdvance);
+    if(onSendRecv) onSendRecv(true);
     auto result=rtx.sendAt(txPacket,packetLength,currentSlotTime);
+    if(onSendRecv) onSendRecv(false);
     (void)result;
     sendQueue.pop_front();
 
@@ -268,7 +270,9 @@ RecvResult StarNet::recv(unsigned char slotNumber)
 #if DEBUG_PRINT > 2
     auto b=platform.getTime();
 #endif //DEBUG_PRINT
+    if(onSendRecv) onSendRecv(true);
     auto result=rtx.recv(&rxPacket,packetLength,currentSlotTime+w);
+    if(onSendRecv) onSendRecv(false);
 #if DEBUG_PRINT > 2
     auto a=platform.getTime();
     iprintf("recv err=%d rssi=%ddBm len=%d rcvt=%lldns T=%lldns\n",
