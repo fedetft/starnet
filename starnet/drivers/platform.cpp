@@ -187,7 +187,7 @@ static void waitForDio0()
 }
 
 #else
-#error No low power waitForPacketOrTimeout()/waitForPacketSent() available!
+#error No low power waitForDio0() available!
 #endif
 
 static int getDio0()

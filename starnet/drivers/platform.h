@@ -34,10 +34,12 @@
 // IOMAPPING=0: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA2,  res=PA14
 // IOMAPPING=1: sck=PA5 miso=PA6 mosi=PA7 CS=PB11 DIO0=PA15, res=PA14
 // anything else and you'll have to modify the driver
+#ifndef IOMAPPING
 #define IOMAPPING 1
+#endif //IOMAPPING
 
 // Configure legacy pins in previous board version
-#define LEGACY_PINS
+//#define LEGACY_PINS
 
 // Utilities
 
