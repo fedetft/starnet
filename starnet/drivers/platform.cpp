@@ -42,13 +42,19 @@ using mosi = Gpio<GPIOA_BASE,7>;
 #if IOMAPPING==0
 using cs   = Gpio<GPIOA_BASE,4>;
 using dio0 = Gpio<GPIOA_BASE,2>; //PacketSent/PayloadReady
+using res  = Gpio<GPIOA_BASE,14>;
 #elif IOMAPPING==1
 using cs   = Gpio<GPIOB_BASE,11>;
 using dio0 = Gpio<GPIOA_BASE,15>; //PacketSent/PayloadReady
+using res  = Gpio<GPIOA_BASE,14>;
+#elif IOMAPPING==2
+using cs   = Gpio<GPIOA_BASE,4>;
+using dio0 = Gpio<GPIOA_BASE,12>; //PacketSent/PayloadReady
+using res  = Gpio<GPIOA_BASE,11>;
 #else
 #error IOMAPPING undefined
 #endif
-using res  = Gpio<GPIOA_BASE,14>;
+
 
 // SPI1 code
 
@@ -134,7 +140,7 @@ static void waitForDio0()
     }
 }
 
-#elif IOMAPPING==1
+#elif IOMAPPING==1 || IOMAPPING==2
 
 static Thread *waiting=nullptr;
 static long long timestamp=0;
@@ -149,7 +155,11 @@ void __attribute__((naked)) EXTI15_10_IRQHandler()
 
 void __attribute__((used)) EXTI15_10HandlerImpl()
 {
+#if IOMAPPING==1
     EXTI->PR=EXTI_PR_PR15;
+#else
+    EXTI->PR=EXTI_PR_PR12;
+#endif
     
     timestamp=rtcPtr->IRQgetValue();
     if(waiting==nullptr) return;
@@ -167,8 +177,13 @@ static void extiInit(Rtc& rtc)
         RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
     }
     dio0::mode(Mode::INPUT);
+#if IOMAPPING==1
     EXTI->RTSR |= EXTI_RTSR_TR15;
     EXTI->IMR |= EXTI_IMR_MR15;
+#else
+    EXTI->RTSR |= EXTI_RTSR_TR12;
+    EXTI->IMR |= EXTI_IMR_MR12;
+#endif
     NVIC_EnableIRQ(EXTI15_10_IRQn);
     NVIC_SetPriority(EXTI15_10_IRQn, 3); //High priority
 }
@@ -313,10 +328,17 @@ Platform::Platform() : rtc(Rtc::instance())
 {
     {
         FastInterruptDisableLock dLock;
-        //Board has no JTAG nor SWD, and those pins are used
-        //HSE is not used, remap PD0/PD1 in order to avoid leaving them floating
         RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
-        AFIO->MAPR=AFIO_MAPR_SWJ_CFG_2 | AFIO_MAPR_PD01_REMAP;
+        AFIO->MAPR=
+#if IOMAPPING!=2 || !defined(JTAG_DISABLE_SLEEP)
+        //PA14 is by default used for JTAG / SWD, disable
+        AFIO_MAPR_SWJ_CFG_2 |
+#endif
+#ifdef RUN_WITH_HSI
+        //HSE is not used, remap PD0/PD1 in order to avoid leaving them floating
+        AFIO_MAPR_PD01_REMAP |
+#endif
+        0;
     }
   
 #ifdef _BOARD_STM32F103CX_GENERIC

@@ -33,10 +33,14 @@
 // This driver can work with two IO mappings of the stm32:
 // IOMAPPING=0: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA2,  res=PA14
 // IOMAPPING=1: sck=PA5 miso=PA6 mosi=PA7 CS=PB11 DIO0=PA15, res=PA14
+// IOMAPPING=2: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA12, res=PA11
 // anything else and you'll have to modify the driver
 #ifndef IOMAPPING
-#define IOMAPPING 1
+#define IOMAPPING 2
 #endif //IOMAPPING
+
+// Force disabling of JTAG pins (mapped as GPIO instead)
+//#define JTAG_FORCE_DISABLE
 
 // Configure legacy pins in previous board version
 //#define LEGACY_PINS
