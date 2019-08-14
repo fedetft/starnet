@@ -29,6 +29,7 @@
 
 #include <list>
 #include <functional>
+#include <interfaces/atomic_ops.h>
 #include "drivers/platform.h"
 #include "drivers/transceiver.h"
 #include "libs/flopsync2.h"
@@ -241,7 +242,7 @@ public:
      */
     void preventDeepSleep()
     {
-        deepSleep++;
+        miosix::atomicAdd(&deepSleep,1);
     }
     
     /**
@@ -249,7 +250,7 @@ public:
      */
     void allowDeepSleep()
     {
-        if(deepSleep>0) deepSleep--;
+        miosix::atomicAdd(&deepSleep,-1);
     }
     
     /**
@@ -311,7 +312,7 @@ private:
     long long currentSlotTime=0;       ///< time in ns of the current slot start
     unsigned short slotPhase=0;        ///< when we need to sync clock
     unsigned char missedPackets=0;     ///< sync packet we've missed in a row
-    unsigned char deepSleep=0;         ///< allow going in deep sleep
+    int deepSleep=0;                   ///< allow going in deep sleep
     static const unsigned char maxMissedPackets=3;
     
     std::list<Packet> sendQueue;
