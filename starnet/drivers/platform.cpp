@@ -72,11 +72,10 @@ static unsigned char spi1sendRecv(unsigned char x=0)
 
 static void initSpi1()
 {
-    {
-        FastInterruptDisableLock dLock;
-        RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
-        RCC_SYNC();
-    }
+    FastInterruptDisableLock dLock;
+    RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+    RCC_SYNC();
+    
     SPI1->CR1=SPI_CR1_SSM  //No HW cs
             | SPI_CR1_SSI
             | SPI_CR1_SPE  //SPI enabled
@@ -119,6 +118,7 @@ void __attribute__((used)) EXTI2HandlerImpl()
 
 static void extiInit(Rtc& rtc)
 {
+    FastInterruptDisableLock dLock;
     rtcPtr=&rtc;
     dio0::mode(Mode::INPUT);
     EXTI->RTSR |= EXTI_RTSR_TR2;
@@ -171,11 +171,8 @@ void __attribute__((used)) EXTI15_10HandlerImpl()
 
 static void extiInit(Rtc& rtc)
 {
+    FastInterruptDisableLock dLock;
     rtcPtr=&rtc;
-    {
-        FastInterruptDisableLock dLock;
-        RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
-    }
     dio0::mode(Mode::INPUT);
 #if IOMAPPING==1
     EXTI->RTSR |= EXTI_RTSR_TR15;
@@ -271,9 +268,15 @@ Platform& Platform::instance()
 void Platform::absoluteDeepSleep(long long ns)
 {
     //Do not leave this pin floating to reduce power
-    miso::mode(Mode::INPUT_PULL_UP_DOWN);
+    {
+        FastInterruptDisableLock dLock;
+        miso::mode(Mode::INPUT_PULL_UP_DOWN);
+    }
     ::absoluteDeepSleep(ns);
-    miso::mode(Mode::ALTERNATE);
+    {
+        FastInterruptDisableLock dLock;
+        miso::mode(Mode::ALTERNATE);
+    }
 }
 
 void Platform::csLow()
@@ -339,34 +342,35 @@ Platform::Platform() : rtc(Rtc::instance())
         AFIO_MAPR_PD01_REMAP |
 #endif
         0;
-    }
   
 #ifdef _BOARD_STM32F103CX_GENERIC
-    //All GPIOs default to input with pulldown
-    GPIOA->CRL=0x88888888; GPIOA->CRH=0x88888888;
-    GPIOB->CRL=0x88888888; GPIOB->CRH=0x88888888;
-    GPIOC->CRH=0x88888888;
-    GPIOD->CRL=0x88888888;
-    
-    GPIOA->ODR=0;
-    GPIOB->ODR=0;
-    
-    //Then, reconfigure the ones we use
-    tx::mode(Mode::ALTERNATE);
-    rx::mode(Mode::INPUT_PULL_UP_DOWN); rx::pullup();
-    //cs, sck, miso, mosi, dio0 will be set by initSpi1 and extiInit
+        //All GPIOs default to input with pulldown
+        GPIOA->CRL=0x88888888; GPIOA->CRH=0x88888888;
+        GPIOB->CRL=0x88888888; GPIOB->CRH=0x88888888;
+        GPIOC->CRH=0x88888888;
+        GPIOD->CRL=0x88888888;
+        
+        GPIOA->ODR=0;
+        GPIOB->ODR=0;
+        
+        //Then, reconfigure the ones we use
+        tx::mode(Mode::ALTERNATE);
+        rx::mode(Mode::INPUT_PULL_UP_DOWN); rx::pullup();
+        //cs, sck, miso, mosi, dio0 will be set by initSpi1 and extiInit
 
 #ifdef LEGACY_PINS
-    Gpio<GPIOB_BASE,8>::mode(Mode::INPUT); //PB8 forced to vcc externally
-    Gpio<GPIOB_BASE,3>::mode(Mode::INPUT); //dio1 (legacy)
+        Gpio<GPIOB_BASE,8>::mode(Mode::INPUT); //PB8 forced to vcc externally
+        Gpio<GPIOB_BASE,3>::mode(Mode::INPUT); //dio1 (legacy)
 #endif //LEGACY_PINS
 #endif //_BOARD_STM32F103CX_GENERIC
+
+        res::mode(Mode::OUTPUT);
+    }
     
     initSpi1();
     extiInit(rtc);
     initAdc();
     
-    res::mode(Mode::OUTPUT);
     res::high();
     delayUs(100);
     res::low();
