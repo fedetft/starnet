@@ -41,6 +41,11 @@
 #define DEBUG_PRINT 0
 
 /**
+ * Trade one payload byte for more nonce bits
+ */
+//#define HIGH_SECURITY
+
+/**
  * The received packet callback will provide this struct
  */
 struct ReceivedPacket
@@ -80,7 +85,11 @@ struct ReceivedPacket
 class StarNet
 {
 public:
+#ifdef HIGH_SECURITY
+    static const int maxPayloadBytes=9;  ///< StarNet packets carry 1..9 bytes
+#else //HIGH_SECURITY
     static const int maxPayloadBytes=10; ///< StarNet packets carry 1..10 bytes
+#endif //HIGH_SECURITY
     static const int packetLength=16;    ///< Length of all packets transmitted
     
     /**
@@ -276,7 +285,11 @@ private:
         unsigned char payload[maxPayloadBytes];
         unsigned int payloadLength:4;
         unsigned int isSync:1;
+#ifdef HIGH_SECURITY
+        unsigned long long nonce:35;
+#else //HIGH_SECURITY
         unsigned int nonce:27;
+#endif //HIGH_SECURITY
         unsigned short crc;
     };
     static_assert(sizeof(Packet)==packetLength,"");
@@ -307,7 +320,13 @@ private:
     /// For example, 0b1101 means node 0, 2 and 3. Bit 0 should always be set,
     /// as every node needs to listen to the network master.
     unsigned int subscribeMask=0b1;
+#ifdef HIGH_SECURITY
+    static const unsigned long long nonceMask=0x7ffffffff;
+    unsigned long long nonce=0;        ///< Used to prevent replay attacks
+#else //HIGH_SECURITY
+    static const unsigned int nonceMask=0x07ffffff;
     unsigned int nonce=0;              ///< Used to prevent replay attacks
+#endif //HIGH_SECURITY
     long long correctedSlotDuration=0; ///< slotDurationNs corrected for clock errors
     long long currentSlotTime=0;       ///< time in ns of the current slot start
     unsigned short slotPhase=0;        ///< when we need to sync clock

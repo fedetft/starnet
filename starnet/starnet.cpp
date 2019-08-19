@@ -107,14 +107,21 @@ void StarNet::run()
     
     if(config.nodeId==0)
     {
-        nonce=platform.trueRand() & 0x07ffffff;
+#ifdef HIGH_SECURITY
+        nonce=platform.trueRand();
+        nonce<<=32;
+        nonce|=platform.trueRand();
+        nonce&=nonceMask;
+#else //HIGH_SECURITY
+        nonce=platform.trueRand() & nonceMask;
+#endif //HIGH_SECURITY
         missedPackets=0;
         if(onConnect) onConnect();
     } else {
         missedPackets=maxMissedPackets;
         //Connect and do the first round without masterNodeSlot()
         connect();
-        nonce=(nonce+1) & 0x07ffffff;
+        nonce=(nonce+1) & nonceMask;
         currentSlotTime+=correctedSlotDuration;
         for(unsigned char i=1;i<config.maxNumNodes;i++) slot(i);
         if(onPeriodic) onPeriodic();
@@ -209,7 +216,7 @@ void StarNet::masterNodeSlot()
             if(thisSlotIsSync) miss();
         }
     }
-    nonce=(nonce+1) & 0x07ffffff;
+    nonce=(nonce+1) & nonceMask;
     currentSlotTime+=correctedSlotDuration;
 }
 
@@ -234,7 +241,7 @@ void StarNet::slot(unsigned char slotNumber)
             }
         }
     }
-    nonce=(nonce+1) & 0x07ffffff;
+    nonce=(nonce+1) & nonceMask;
     currentSlotTime+=correctedSlotDuration;
 }
 
