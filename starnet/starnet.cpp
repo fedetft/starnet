@@ -148,7 +148,7 @@ StarNet::StarNetConfig StarNet::getConfigHelper(long long slotDurationNs,
     config.nodeId=min<unsigned char>(config.maxNumNodes,nodeId);
     
     // Cap the slot period to the minimum allowed by the transceiver
-    long long minimumPeriod=0;
+    long long minimumPeriod=moreAdvance;
     minimumPeriod+=std::max(Transceiver::txAdvance,Transceiver::rxAdvance);
     minimumPeriod+=(Transceiver::overhead+packetLength)*Transceiver::byteTime;
     config.slotDurationNs=std::max(minimumPeriod,slotDurationNs);
@@ -252,8 +252,8 @@ void StarNet::send()
     txPacket->crc=miosix::crc16(txPacket,packetLength-2);
     AES_ECB_encrypt(&config.aesCtx,reinterpret_cast<unsigned char*>(txPacket));
     if(deepSleep==0)
-        platform.absoluteDeepSleep(currentSlotTime-Transceiver::txAdvance);
-    else platform.absoluteSleep(currentSlotTime-Transceiver::txAdvance);
+        platform.absoluteDeepSleep(currentSlotTime-Transceiver::txAdvance-moreAdvance);
+    else platform.absoluteSleep(currentSlotTime-Transceiver::txAdvance-moreAdvance);
     if(onSendRecv) onSendRecv(true);
     auto result=rtx.sendAt(txPacket,packetLength,currentSlotTime);
     if(onSendRecv) onSendRecv(false);
@@ -272,8 +272,8 @@ RecvResult StarNet::recv(unsigned char slotNumber)
 {
     long long w=config.nodeId==0 ? Flopsync2::wMin : flopsync2.getReceiverWindow();
     if(deepSleep==0)
-        platform.absoluteDeepSleep(currentSlotTime-Transceiver::rxAdvance-w);
-    else platform.absoluteSleep(currentSlotTime-Transceiver::rxAdvance-w);
+        platform.absoluteDeepSleep(currentSlotTime-Transceiver::rxAdvance-moreAdvance-w);
+    else platform.absoluteSleep(currentSlotTime-Transceiver::rxAdvance-moreAdvance-w);
 #if DEBUG_PRINT > 2
     auto b=platform.getTime();
 #endif //DEBUG_PRINT

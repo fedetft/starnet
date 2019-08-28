@@ -333,6 +333,7 @@ private:
     unsigned char missedPackets=0;     ///< sync packet we've missed in a row
     int deepSleep=0;                   ///< allow going in deep sleep
     static const unsigned char maxMissedPackets=3;
+    static const int moreAdvance=100000; ///< Wakeup earlier to account for overhead
     
     std::list<Packet> sendQueue;
     Packet rxPacket;
