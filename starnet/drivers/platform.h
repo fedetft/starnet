@@ -34,6 +34,7 @@
 // IOMAPPING=0: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA2,  res=PA14
 // IOMAPPING=1: sck=PA5 miso=PA6 mosi=PA7 CS=PB11 DIO0=PA15, res=PA14
 // IOMAPPING=2: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA12, res=PA11
+// IOMAPPING=3: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA1,  res=PA8
 // anything else and you'll have to modify the driver
 #ifndef IOMAPPING
 #define IOMAPPING 2

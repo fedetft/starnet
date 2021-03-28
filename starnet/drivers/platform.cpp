@@ -51,6 +51,10 @@ using res  = Gpio<GPIOA_BASE,14>;
 using cs   = Gpio<GPIOA_BASE,4>;
 using dio0 = Gpio<GPIOA_BASE,12>; //PacketSent/PayloadReady
 using res  = Gpio<GPIOA_BASE,11>;
+#elif IOMAPPING==3
+using cs   = Gpio<GPIOA_BASE,4>;
+using dio0 = Gpio<GPIOA_BASE,1>; //PacketSent/PayloadReady
+using res  = Gpio<GPIOA_BASE,8>;
 #else
 #error IOMAPPING undefined
 #endif
@@ -91,11 +95,11 @@ static void initSpi1()
 
 // EXTI code
 
-#if IOMAPPING==0
-
 static Thread *waiting=nullptr;
 static long long timestamp=0;
 static Rtc *rtcPtr=nullptr;
+
+#if IOMAPPING==0
 
 void __attribute__((naked)) EXTI2_IRQHandler()
 {
@@ -127,24 +131,7 @@ static void extiInit(Rtc& rtc)
     NVIC_SetPriority(EXTI2_IRQn,3); //High priority
 }
 
-static void waitForDio0()
-{
-    FastInterruptDisableLock dLock;
-    if(dio0::value()) return;
-    waiting=Thread::IRQgetCurrentThread();
-    while(waiting)
-    {
-        Thread::IRQwait();
-        FastInterruptEnableLock eLock(dLock);
-        Thread::yield();
-    }
-}
-
 #elif IOMAPPING==1 || IOMAPPING==2
-
-static Thread *waiting=nullptr;
-static long long timestamp=0;
-static Rtc *rtcPtr=nullptr;
 
 void __attribute__((naked)) EXTI15_10_IRQHandler()
 {
@@ -185,6 +172,42 @@ static void extiInit(Rtc& rtc)
     NVIC_SetPriority(EXTI15_10_IRQn, 3); //High priority
 }
 
+#elif IOMAPPING==3
+
+void __attribute__((naked)) EXTI1_IRQHandler()
+{
+    saveContext();
+    asm volatile("bl _Z16EXTI1HandlerImplv");
+    restoreContext();
+}
+
+void __attribute__((used)) EXTI1HandlerImpl()
+{
+    EXTI->PR=EXTI_PR_PR1;
+    
+    timestamp=rtcPtr->IRQgetValue();
+    if(waiting==nullptr) return;
+    waiting->IRQwakeup();
+    if(waiting->IRQgetPriority()>Thread::IRQgetCurrentThread()->IRQgetPriority())
+        Scheduler::IRQfindNextThread();
+    waiting=nullptr;
+}
+
+static void extiInit(Rtc& rtc)
+{
+    FastInterruptDisableLock dLock;
+    rtcPtr=&rtc;
+    dio0::mode(Mode::INPUT);
+    EXTI->RTSR |= EXTI_RTSR_TR1;
+    EXTI->IMR |= EXTI_IMR_MR1;
+    NVIC_EnableIRQ(EXTI1_IRQn);
+    NVIC_SetPriority(EXTI1_IRQn,3); //High priority
+}
+
+#else
+#error No low power waitForDio0() available!
+#endif
+
 static void waitForDio0()
 {
     FastInterruptDisableLock dLock;
@@ -197,10 +220,6 @@ static void waitForDio0()
         Thread::yield();
     }
 }
-
-#else
-#error No low power waitForDio0() available!
-#endif
 
 static int getDio0()
 {
