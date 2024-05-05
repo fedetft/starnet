@@ -354,7 +354,9 @@ Platform::Platform() : rtc(Rtc::instance())
         AFIO->MAPR=
 #if IOMAPPING!=2 || !defined(JTAG_DISABLE_SLEEP)
         //PA14 is by default used for JTAG / SWD, disable
-        AFIO_MAPR_SWJ_CFG_2 |
+        AFIO_MAPR_SWJ_CFG_2 | //All GPIOs free
+#else
+        AFIO_MAPR_SWJ_CFG_1 | //PA13/PA14 reserved for SWDIO/SWCLK
 #endif
 #ifdef RUN_WITH_HSI
         //HSE is not used, remap PD0/PD1 in order to avoid leaving them floating

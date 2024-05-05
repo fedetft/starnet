@@ -40,9 +40,6 @@
 #define IOMAPPING 2
 #endif //IOMAPPING
 
-// Force disabling of JTAG pins (mapped as GPIO instead)
-//#define JTAG_FORCE_DISABLE
-
 // Configure legacy pins in previous board version
 //#define LEGACY_PINS
 
