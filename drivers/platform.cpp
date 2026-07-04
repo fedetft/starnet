@@ -27,7 +27,7 @@
 
 #include "platform.h"
 #include <miosix.h>
-#include <kernel/scheduler/scheduler.h>
+#include <interfaces/interrupts.h>
 
 using namespace miosix;
 
@@ -76,7 +76,7 @@ static unsigned char spi1sendRecv(unsigned char x=0)
 
 static void initSpi1()
 {
-    FastInterruptDisableLock dLock;
+    FastGlobalIrqLock dLock;
     RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
     RCC_SYNC();
     
@@ -101,28 +101,20 @@ static Rtc *rtcPtr=nullptr;
 
 #if IOMAPPING==0
 
-void __attribute__((naked)) EXTI2_IRQHandler()
-{
-    saveContext();
-    asm volatile("bl _Z16EXTI2HandlerImplv");
-    restoreContext();
-}
-
-void __attribute__((used)) EXTI2HandlerImpl()
+void EXTI2_IRQHandler()
 {
     EXTI->PR=EXTI_PR_PR2;
     
     timestamp=rtcPtr->IRQgetValue();
     if(waiting==nullptr) return;
     waiting->IRQwakeup();
-    if(waiting->IRQgetPriority()>Thread::IRQgetCurrentThread()->IRQgetPriority())
-        Scheduler::IRQfindNextThread();
     waiting=nullptr;
 }
 
 static void extiInit(Rtc& rtc)
 {
-    FastInterruptDisableLock dLock;
+    GlobalIrqLock dLock;
+    IRQregisterIrq(dLock,EXTI2_IRQn,EXTI2_IRQHandler);
     rtcPtr=&rtc;
     dio0::mode(Mode::INPUT);
     EXTI->RTSR |= EXTI_RTSR_TR2;
@@ -133,14 +125,7 @@ static void extiInit(Rtc& rtc)
 
 #elif IOMAPPING==1 || IOMAPPING==2
 
-void __attribute__((naked)) EXTI15_10_IRQHandler()
-{
-    saveContext();
-    asm volatile("bl _Z20EXTI15_10HandlerImplv");
-    restoreContext();
-}
-
-void __attribute__((used)) EXTI15_10HandlerImpl()
+void EXTI15_10_IRQHandler()
 {
 #if IOMAPPING==1
     EXTI->PR=EXTI_PR_PR15;
@@ -151,14 +136,13 @@ void __attribute__((used)) EXTI15_10HandlerImpl()
     timestamp=rtcPtr->IRQgetValue();
     if(waiting==nullptr) return;
     waiting->IRQwakeup();
-    if(waiting->IRQgetPriority()>Thread::IRQgetCurrentThread()->IRQgetPriority())
-        Scheduler::IRQfindNextThread();
     waiting=nullptr;
 }
 
 static void extiInit(Rtc& rtc)
 {
-    FastInterruptDisableLock dLock;
+    GlobalIrqLock dLock;
+    IRQregisterIrq(dLock,EXTI15_10_IRQn,EXTI15_10_IRQHandler);
     rtcPtr=&rtc;
     dio0::mode(Mode::INPUT);
 #if IOMAPPING==1
@@ -174,28 +158,20 @@ static void extiInit(Rtc& rtc)
 
 #elif IOMAPPING==3
 
-void __attribute__((naked)) EXTI1_IRQHandler()
-{
-    saveContext();
-    asm volatile("bl _Z16EXTI1HandlerImplv");
-    restoreContext();
-}
-
-void __attribute__((used)) EXTI1HandlerImpl()
+void EXTI1_IRQHandler()
 {
     EXTI->PR=EXTI_PR_PR1;
     
     timestamp=rtcPtr->IRQgetValue();
     if(waiting==nullptr) return;
     waiting->IRQwakeup();
-    if(waiting->IRQgetPriority()>Thread::IRQgetCurrentThread()->IRQgetPriority())
-        Scheduler::IRQfindNextThread();
     waiting=nullptr;
 }
 
 static void extiInit(Rtc& rtc)
 {
-    FastInterruptDisableLock dLock;
+    GlobalIrqLock dLock;
+    IRQregisterIrq(dLock,EXTI1_IRQn,EXTI1_IRQHandler);
     rtcPtr=&rtc;
     dio0::mode(Mode::INPUT);
     EXTI->RTSR |= EXTI_RTSR_TR1;
@@ -210,15 +186,10 @@ static void extiInit(Rtc& rtc)
 
 static void waitForDio0()
 {
-    FastInterruptDisableLock dLock;
+    FastGlobalIrqLock dLock;
     if(dio0::value()) return;
     waiting=Thread::IRQgetCurrentThread();
-    while(waiting)
-    {
-        Thread::IRQwait();
-        FastInterruptEnableLock eLock(dLock);
-        Thread::yield();
-    }
+    while(waiting) Thread::IRQglobalIrqUnlockAndWait(dLock);
 }
 
 static int getDio0()
@@ -236,7 +207,7 @@ static long long getDio0Timestamp()
 static void initAdc()
 {
     {
-        FastInterruptDisableLock dLock;
+        FastGlobalIrqLock dLock;
         const int maxAdcClk=14000000;
         int divider=(SystemCoreClock+maxAdcClk-1)/maxAdcClk;
         RCC->CFGR &= ~RCC_CFGR_ADCPRE;
@@ -288,12 +259,12 @@ void Platform::absoluteDeepSleep(long long ns)
 {
     //Do not leave this pin floating to reduce power
     {
-        FastInterruptDisableLock dLock;
+        FastGlobalIrqLock dLock;
         miso::mode(Mode::INPUT_PULL_UP_DOWN);
     }
     ::absoluteDeepSleep(ns);
     {
-        FastInterruptDisableLock dLock;
+        FastGlobalIrqLock dLock;
         miso::mode(Mode::ALTERNATE);
     }
 }
@@ -349,7 +320,7 @@ unsigned short Platform::adcReadChannel(unsigned char channel)
 Platform::Platform() : rtc(Rtc::instance())
 {
     {
-        FastInterruptDisableLock dLock;
+        FastGlobalIrqLock dLock;
         RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
         AFIO->MAPR=
 #if IOMAPPING!=2 || !defined(JTAG_DISABLE_SLEEP)
