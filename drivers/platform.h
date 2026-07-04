@@ -33,8 +33,9 @@
 // This driver can work with two IO mappings of the stm32:
 // IOMAPPING=0: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA2,  res=PA14
 // IOMAPPING=1: sck=PA5 miso=PA6 mosi=PA7 CS=PB11 DIO0=PA15, res=PA14
-// IOMAPPING=2: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA12, res=PA11
+// IOMAPPING=2: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA12, res=PA11 (home_wsn_master_node_new)
 // IOMAPPING=3: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA1,  res=PA8
+// IOMAPPING=4: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA2,  res=PA3  (microboard)
 // anything else and you'll have to modify the driver
 #ifndef IOMAPPING
 #define IOMAPPING 2

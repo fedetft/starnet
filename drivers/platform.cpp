@@ -55,6 +55,10 @@ using res  = Gpio<GPIOA_BASE,11>;
 using cs   = Gpio<GPIOA_BASE,4>;
 using dio0 = Gpio<GPIOA_BASE,1>; //PacketSent/PayloadReady
 using res  = Gpio<GPIOA_BASE,8>;
+#elif IOMAPPING==4
+using cs   = Gpio<GPIOA_BASE,4>;
+using dio0 = Gpio<GPIOA_BASE,2>; //PacketSent/PayloadReady
+using res  = Gpio<GPIOA_BASE,3>;
 #else
 #error IOMAPPING undefined
 #endif
@@ -99,7 +103,7 @@ static Thread *waiting=nullptr;
 static long long timestamp=0;
 static Rtc *rtcPtr=nullptr;
 
-#if IOMAPPING==0
+#if IOMAPPING==0 || IOMAPPING==4
 
 void EXTI2_IRQHandler()
 {
@@ -322,20 +326,20 @@ Platform::Platform() : rtc(Rtc::instance())
     {
         FastGlobalIrqLock dLock;
         RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
+
+        //HSE is not used, remap PD0/PD1 in order to avoid leaving them floating
+        constexpr unsigned int pd01remp=
+            oscillatorType==OscillatorType::HSI ? AFIO_MAPR_PD01_REMAP : 0;
         AFIO->MAPR=
-#if IOMAPPING!=2 || !defined(JTAG_DISABLE_SLEEP)
+#if IOMAPPING==0 || IOMAPPING==1 || defined(WITH_SLEEP)
         //PA14 is by default used for JTAG / SWD, disable
         AFIO_MAPR_SWJ_CFG_2 | //All GPIOs free
 #else
         AFIO_MAPR_SWJ_CFG_1 | //PA13/PA14 reserved for SWDIO/SWCLK
 #endif
-#ifdef RUN_WITH_HSI
-        //HSE is not used, remap PD0/PD1 in order to avoid leaving them floating
-        AFIO_MAPR_PD01_REMAP |
-#endif
-        0;
+        pd01remp;
   
-#ifdef _BOARD_STM32F103CX_GENERIC
+#if defined(_BOARD_STM32F103CX_GENERIC) || defined(_BOARD_MICROBOARD)
         //All GPIOs default to input with pulldown
         GPIOA->CRL=0x88888888; GPIOA->CRH=0x88888888;
         GPIOB->CRL=0x88888888; GPIOB->CRH=0x88888888;
@@ -354,7 +358,7 @@ Platform::Platform() : rtc(Rtc::instance())
         Gpio<GPIOB_BASE,8>::mode(Mode::INPUT); //PB8 forced to vcc externally
         Gpio<GPIOB_BASE,3>::mode(Mode::INPUT); //dio1 (legacy)
 #endif //LEGACY_PINS
-#endif //_BOARD_STM32F103CX_GENERIC
+#endif //_BOARD_STM32F103CX_GENERIC || _BOARD_MICROBOARD
 
         res::mode(Mode::OUTPUT);
     }
