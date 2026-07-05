@@ -29,9 +29,11 @@
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include <kernel/thread.h>
 #include <util/crc16.h>
 
 using namespace std;
+using namespace miosix;
 
 //
 // class StarNet
@@ -102,7 +104,7 @@ void StarNet::run()
 #endif //DEBUG_PRINT
 
     correctedSlotDuration=config.slotDurationNs;
-    currentSlotTime=platform.getTime()+correctedSlotDuration;
+    currentSlotTime=getTime()+correctedSlotDuration;
     slotPhase=config.syncPeriodRounds-1;
     
     if(config.nodeId==0)
@@ -251,9 +253,7 @@ void StarNet::send()
     txPacket->nonce=nonce;
     txPacket->crc=miosix::crc16(txPacket,packetLength-2);
     AES_ECB_encrypt(&config.aesCtx,reinterpret_cast<unsigned char*>(txPacket));
-    if(deepSleep==0)
-        platform.absoluteDeepSleep(currentSlotTime-Transceiver::txAdvance-moreAdvance);
-    else platform.absoluteSleep(currentSlotTime-Transceiver::txAdvance-moreAdvance);
+    Thread::nanoSleepUntil(currentSlotTime-Transceiver::txAdvance-moreAdvance);
     if(onSendRecv) onSendRecv(true);
     auto result=rtx.sendAt(txPacket,packetLength,currentSlotTime);
     if(onSendRecv) onSendRecv(false);
@@ -271,17 +271,15 @@ void StarNet::send()
 RecvResult StarNet::recv(unsigned char slotNumber)
 {
     long long w=config.nodeId==0 ? Flopsync2::wMin : flopsync2.getReceiverWindow();
-    if(deepSleep==0)
-        platform.absoluteDeepSleep(currentSlotTime-Transceiver::rxAdvance-moreAdvance-w);
-    else platform.absoluteSleep(currentSlotTime-Transceiver::rxAdvance-moreAdvance-w);
+    Thread::nanoSleepUntil(currentSlotTime-Transceiver::rxAdvance-moreAdvance-w);
 #if DEBUG_PRINT > 2
-    auto b=platform.getTime();
+    auto b=getTime();
 #endif //DEBUG_PRINT
     if(onSendRecv) onSendRecv(true);
     auto result=rtx.recv(&rxPacket,packetLength,currentSlotTime+w);
     if(onSendRecv) onSendRecv(false);
 #if DEBUG_PRINT > 2
-    auto a=platform.getTime();
+    auto a=getTime();
     iprintf("recv err=%d rssi=%ddBm len=%d rcvt=%lldns T=%lldns\n",
             result.error,result.rssi,result.size,a-b,
             result.error==RecvResult::OK ? result.timestamp : currentSlotTime);
@@ -316,9 +314,9 @@ void StarNet::connect()
     
     // Quick connect
     auto syncPeriod=config.syncPeriodRounds*config.slotDurationNs*config.maxNumNodes;
-    auto timeout=platform.getTime()+syncPeriod*quickConnectSyncPeriods+syncPeriod/10;
+    auto timeout=getTime()+syncPeriod*quickConnectSyncPeriods+syncPeriod/10;
 #if DEBUG_PRINT > 2
-    iprintf("connecting timeout=%lldns T=%lldns\n",timeout,platform.getTime());
+    iprintf("connecting timeout=%lldns T=%lldns\n",timeout,getTime());
 #elif DEBUG_PRINT > 0
     puts("connecting");
 #endif //DEBUG_PRINT
@@ -328,7 +326,7 @@ void StarNet::connect()
 #if DEBUG_PRINT > 2
         iprintf("recv good=%d err=%d rssi=%ddBm len=%d T=%lldns\n",
                 syncFound,rr.error,rr.rssi,rr.size,
-                rr.timestamp==0 ? platform.getTime() : rr.timestamp);
+                rr.timestamp==0 ? getTime() : rr.timestamp);
 #endif //DEBUG_PRINT
     } while(syncFound==false && rr.error!=RecvResult::TIMEOUT);
     
@@ -337,18 +335,15 @@ void StarNet::connect()
     auto minusDuty=plusDuty*(lowPowerConnectRatio-1);
     while(syncFound==false)
     {
-        auto timeout=platform.getTime()+minusDuty;
+        auto timeout=getTime()+minusDuty;
         if(onPeriodic) onPeriodic();
-        if(deepSleep==0)
-        {
 #if DEBUG_PRINT > 0
-            iprintf("lowPowerConnect: sleeping for %lldns\n",minusDuty);
+        iprintf("lowPowerConnect: sleeping for %lldns\n",minusDuty);
 #endif //DEBUG_PRINT
-            platform.absoluteDeepSleep(timeout);
+        Thread::nanoSleepUntil(timeout);
 #if DEBUG_PRINT > 0
-            puts("lowPowerConnect: waking up");
+        puts("lowPowerConnect: waking up");
 #endif //DEBUG_PRINT
-        }
         
         do {
             rr=rtx.recv(&rxPacket,packetLength,timeout+plusDuty);

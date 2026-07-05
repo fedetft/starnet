@@ -101,7 +101,6 @@ static void initSpi1()
 
 static Thread *waiting=nullptr;
 static long long timestamp=0;
-static Rtc *rtcPtr=nullptr;
 
 #if IOMAPPING==0 || IOMAPPING==4
 
@@ -109,17 +108,16 @@ void EXTI2_IRQHandler()
 {
     EXTI->PR=EXTI_PR_PR2;
     
-    timestamp=rtcPtr->IRQgetValue();
+    timestamp=IRQgetTime();
     if(waiting==nullptr) return;
     waiting->IRQwakeup();
     waiting=nullptr;
 }
 
-static void extiInit(Rtc& rtc)
+static void extiInit()
 {
     GlobalIrqLock dLock;
     IRQregisterIrq(dLock,EXTI2_IRQn,EXTI2_IRQHandler);
-    rtcPtr=&rtc;
     dio0::mode(Mode::INPUT);
     EXTI->RTSR |= EXTI_RTSR_TR2;
     EXTI->IMR |= EXTI_IMR_MR2;
@@ -137,17 +135,16 @@ void EXTI15_10_IRQHandler()
     EXTI->PR=EXTI_PR_PR12;
 #endif
     
-    timestamp=rtcPtr->IRQgetValue();
+    timestamp=IRQgetTime();
     if(waiting==nullptr) return;
     waiting->IRQwakeup();
     waiting=nullptr;
 }
 
-static void extiInit(Rtc& rtc)
+static void extiInit()
 {
     GlobalIrqLock dLock;
     IRQregisterIrq(dLock,EXTI15_10_IRQn,EXTI15_10_IRQHandler);
-    rtcPtr=&rtc;
     dio0::mode(Mode::INPUT);
 #if IOMAPPING==1
     EXTI->RTSR |= EXTI_RTSR_TR15;
@@ -166,17 +163,16 @@ void EXTI1_IRQHandler()
 {
     EXTI->PR=EXTI_PR_PR1;
     
-    timestamp=rtcPtr->IRQgetValue();
+    timestamp=IRQgetTime();
     if(waiting==nullptr) return;
     waiting->IRQwakeup();
     waiting=nullptr;
 }
 
-static void extiInit(Rtc& rtc)
+static void extiInit()
 {
     GlobalIrqLock dLock;
     IRQregisterIrq(dLock,EXTI1_IRQn,EXTI1_IRQHandler);
-    rtcPtr=&rtc;
     dio0::mode(Mode::INPUT);
     EXTI->RTSR |= EXTI_RTSR_TR1;
     EXTI->IMR |= EXTI_IMR_MR1;
@@ -259,19 +255,20 @@ Platform& Platform::instance()
     return singleton;
 }
 
-void Platform::absoluteDeepSleep(long long ns)
-{
-    //Do not leave this pin floating to reduce power
-    {
-        FastGlobalIrqLock dLock;
-        miso::mode(Mode::INPUT_PULL_UP_DOWN);
-    }
-    ::absoluteDeepSleep(ns);
-    {
-        FastGlobalIrqLock dLock;
-        miso::mode(Mode::ALTERNATE);
-    }
-}
+//TODO: reconfigure this pin when entering deep sleep
+// void Platform::absoluteDeepSleep(long long ns)
+// {
+//     //Do not leave this pin floating to reduce power
+//     {
+//         FastGlobalIrqLock dLock;
+//         miso::mode(Mode::INPUT_PULL_UP_DOWN);
+//     }
+//     ::absoluteDeepSleep(ns);
+//     {
+//         FastGlobalIrqLock dLock;
+//         miso::mode(Mode::ALTERNATE);
+//     }
+// }
 
 void Platform::csLow()
 {
@@ -321,7 +318,7 @@ unsigned short Platform::adcReadChannel(unsigned char channel)
     return ::adcReadChannel(channel);
 }
 
-Platform::Platform() : rtc(Rtc::instance())
+Platform::Platform()
 {
     {
         FastGlobalIrqLock dLock;
@@ -364,11 +361,11 @@ Platform::Platform() : rtc(Rtc::instance())
     }
     
     initSpi1();
-    extiInit(rtc);
+    extiInit();
     initAdc();
     
     res::high();
-    delayUs(100);
+    Thread::nanoSleep(100000); //100us
     res::low();
-    sleep(10000000); //10ms
+    Thread::nanoSleep(10000000); //10ms
 }

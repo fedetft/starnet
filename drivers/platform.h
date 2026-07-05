@@ -27,9 +27,6 @@
 
 #pragma once
 
-#include <miosix.h>
-#include <drivers/stm32_rtc.h>
-
 // This driver can work with two IO mappings of the stm32:
 // IOMAPPING=0: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA2,  res=PA14
 // IOMAPPING=1: sck=PA5 miso=PA6 mosi=PA7 CS=PB11 DIO0=PA15, res=PA14
@@ -48,12 +45,6 @@
 // Configure legacy pins in previous board version
 //#define LEGACY_PINS
 
-// Utilities
-
-constexpr long long seconds(int n)      { return n * 1000000000LL; }
-constexpr long long milliseconds(int n) { return n * 1000000LL; }
-constexpr long long microseconds(int n) { return n * 1000LL; }
-
 /**
  * A class to abstract the underlying platform
  */
@@ -64,12 +55,6 @@ public:
      * \return an instance to the platform (singleton)
      */
     static Platform& instance();
-    
-    // Time management
-    long long getTime()              { return rtc.getValue(); }
-    void sleep(long long ns)         { rtc.wait(ns); }
-    void absoluteSleep(long long ns) { rtc.absoluteWait(ns); }
-    void absoluteDeepSleep(long long ns);
     
     // Low-level stuff used by the transceiver implementation
     void csLow();
@@ -87,6 +72,4 @@ public:
     
 private:
     Platform();
-    
-    miosix::Rtc& rtc;
 };

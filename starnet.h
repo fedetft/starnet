@@ -45,6 +45,14 @@
  */
 //#define HIGH_SECURITY
 
+/*
+ * Utilities
+ */
+
+constexpr long long seconds(int n)      { return n * 1000000000LL; }
+constexpr long long milliseconds(int n) { return n * 1000000LL; }
+constexpr long long microseconds(int n) { return n * 1000LL; }
+
 /**
  * The received packet callback will provide this struct
  */
@@ -247,22 +255,6 @@ public:
     int getClockCorrection() const { return flopsync2.getClockCorrection(); }
     
     /**
-     * Called to temporarily prevent going in deep sleep between slots (nestable)
-     */
-    void preventDeepSleep()
-    {
-        miosix::atomicAdd(&deepSleep,1);
-    }
-    
-    /**
-     * Celloed to allow back going in deep sleep between slots
-     */
-    void allowDeepSleep()
-    {
-        miosix::atomicAdd(&deepSleep,-1);
-    }
-    
-    /**
      * Blocking call to run the StarNet
      */
     void run();
@@ -331,7 +323,6 @@ private:
     long long currentSlotTime=0;       ///< time in ns of the current slot start
     unsigned short slotPhase=0;        ///< when we need to sync clock
     unsigned char missedPackets=0;     ///< sync packet we've missed in a row
-    int deepSleep=0;                   ///< allow going in deep sleep
     static const unsigned char maxMissedPackets=3;
     static const int moreAdvance=100000; ///< Wakeup earlier to account for overhead
     

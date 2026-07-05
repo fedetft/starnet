@@ -28,8 +28,10 @@
 #include "rfm69.h"
 #include "platform.h"
 #include <algorithm>
+#include <kernel/thread.h>
 
 using namespace std;
+using namespace miosix;
 
 //
 // class Rfm69
@@ -99,7 +101,7 @@ SendResult Rfm69::sendAt(const void* pkt, int size, long long when)
     //preamble bytes and carry on sending the rest of the packet. Thus if
     //sendAt is called very early, we need to wait till txAdvance not to waste
     //power and occupy the channel
-    platform.absoluteSleep(when-txAdvance);
+    Thread::nanoSleepUntil(when-txAdvance);
     writeReg(0x25,0x00); //DioMapping1=DIO0:PacketSent
     writeReg(0x01,0x0c); //OpMode=TX
     writeReg(0x3c,size); //FifoThresh
@@ -108,8 +110,8 @@ SendResult Rfm69::sendAt(const void* pkt, int size, long long when)
     platform.spiSendRecv(size); //Length byte for variable length packets
     for(int i=0;i<size-1;i++) platform.spiSendRecv(packet[i]); //All but the last byte
     
-    platform.sleep(870000); //TS_OSC (500us) + TS_FS (150us) + TS_TR (160us)
-    if(platform.getTime()>when)
+    Thread::nanoSleep(870000); //TS_OSC (500us) + TS_FS (150us) + TS_TR (160us)
+    if(getTime()>when)
     {
         platform.csHigh();
         writeReg(0x01,0x00); //OpMode=SLEEP, this clears FIFO
@@ -127,7 +129,7 @@ SendResult Rfm69::sendAt(const void* pkt, int size, long long when)
     //If you are using this driver in a multithreaded application, make sure
     //the thread accessing the transceiver is the highest priority, otherwise
     //you would also incur scheduling jitter
-    platform.absoluteSleep(when);
+    Thread::nanoSleepUntil(when);
     platform.spiSendRecv(packet[size-1]); //Last byte triggers TX
     platform.csHigh();
     platform.waitForDio0();
@@ -142,13 +144,13 @@ RecvResult Rfm69::recv(void* pkt, int size, long long timeout)
     result.error=RecvResult::TIMEOUT;
     
     bool hasTimeout=timeout!=infiniteTimeout;
-    long long start=platform.getTime()+rxAdvance;
+    long long start=getTime()+rxAdvance;
     timeout-=start; //Make timeout a relative time
     if(hasTimeout && timeout<0) return result;
     
     writeReg(0x25,0x40); //DioMapping1=DIO0:PayloadReady
     writeReg(0x01,0x10); //OpMode=RX
-    platform.absoluteSleep(start);
+    Thread::nanoSleepUntil(start);
     
     //NOTE: what we want for the timeout is to wait until the timeout and if
     //no packet has started, return. If within the timeout a packet
@@ -183,7 +185,7 @@ RecvResult Rfm69::recv(void* pkt, int size, long long timeout)
         for(int i=0;i<timeoutBytes+overhead+size;i++)
         {
             wakeup+=byteTime;
-            platform.absoluteSleep(wakeup);
+            Thread::nanoSleepUntil(wakeup);
             auto flags1=readReg(0x27);
             //No Rssi and timeout reached, no packet will arrive
             if(i>=timeoutBytes-1 && (flags1 & (1<<3))==0) break;

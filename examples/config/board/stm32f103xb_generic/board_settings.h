@@ -47,7 +47,7 @@ namespace miosix {
 /// much slower (due to RTC limitations, minimum time beween two context
 /// switches becomes 91us), but the os can keep precise time even when the CPU
 /// is clocked with an RC oscillator and time is kept across deep sleep
-//#define WITH_RTC_AS_OS_TIMER
+#define WITH_RTC_AS_OS_TIMER
 
 /// Size of stack for main().
 /// The C standard library is stack-heavy (iprintf requires 1KB)
