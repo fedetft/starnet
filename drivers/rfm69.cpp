@@ -101,6 +101,7 @@ SendResult Rfm69::sendAt(const void* pkt, int size, long long when)
     //preamble bytes and carry on sending the rest of the packet. Thus if
     //sendAt is called very early, we need to wait till txAdvance not to waste
     //power and occupy the channel
+    if(getTime()>when-txAdvance) return SendResult::TOO_LATE;
     Thread::nanoSleepUntil(when-txAdvance);
     writeReg(0x25,0x00); //DioMapping1=DIO0:PacketSent
     writeReg(0x01,0x0c); //OpMode=TX
@@ -110,20 +111,13 @@ SendResult Rfm69::sendAt(const void* pkt, int size, long long when)
     platform.spiSendRecv(size); //Length byte for variable length packets
     for(int i=0;i<size-1;i++) platform.spiSendRecv(packet[i]); //All but the last byte
     
-    Thread::nanoSleep(870000); //TS_OSC (500us) + TS_FS (150us) + TS_TR (160us)
-    if(getTime()>when)
-    {
-        platform.csHigh();
-        writeReg(0x01,0x00); //OpMode=SLEEP, this clears FIFO
-        return SendResult::TOO_LATE;
-    }
     //NOTE: the RFM69 does not have a way to trigger TX with a GPIO, something
     //that would allow to use an output compare timer output which would allow
     //to transmit without software-induced jitter. Moreover, since when we send
     //the last byte the transceiver is already sending preamble bytes, there is
     //a jitter of around one bit time. Doing the opposite, sending the packet
     //via SPI while the transceiver is in sleep and triggering TX with the
-    //OpMode is likely even worse, ans the TS_OSC + TS_FS + TS_TR are given as
+    //OpMode is likely even worse, as the TS_OSC + TS_FS + TS_TR are given as
     //nominal and maximum, so they are not fixed times. It appears that high
     //time determinism (less than one bit time) with RFM69 is just not possible
     //If you are using this driver in a multithreaded application, make sure
