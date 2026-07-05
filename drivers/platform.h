@@ -38,7 +38,11 @@
 // IOMAPPING=4: sck=PA5 miso=PA6 mosi=PA7 CS=PA4  DIO0=PA2,  res=PA3  (microboard)
 // anything else and you'll have to modify the driver
 #ifndef IOMAPPING
+#ifdef _BOARD_MICROBOARD
+#define IOMAPPING 4
+#else
 #define IOMAPPING 2
+#endif
 #endif //IOMAPPING
 
 // Configure legacy pins in previous board version
