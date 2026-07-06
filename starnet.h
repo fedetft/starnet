@@ -324,7 +324,7 @@ private:
     unsigned short slotPhase=0;        ///< when we need to sync clock
     unsigned char missedPackets=0;     ///< sync packet we've missed in a row
     static const unsigned char maxMissedPackets=3;
-    static const int moreAdvance=100000; ///< Wakeup earlier to account for overhead
+    static const int moreAdvance=250000; ///< Wakeup earlier to account for overhead
     
     std::list<Packet> sendQueue;
     Packet rxPacket;

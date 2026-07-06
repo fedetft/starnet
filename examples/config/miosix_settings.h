@@ -200,7 +200,7 @@ constexpr auto extraChecks=ExtraChecks::None;
 /// greater energy saving by turning off also clocks and peripherals when
 /// possible. Requires device drivers to support this option. Not all chips and
 /// boards support this.
-//#define WITH_DEEP_SLEEP
+#define WITH_DEEP_SLEEP
 
 #if defined(WITH_DEEP_SLEEP) && !defined(WITH_SLEEP)
 #error Deep sleep requires sleep support

@@ -29,6 +29,7 @@
 #include "platform.h"
 #include <algorithm>
 #include <kernel/thread.h>
+#include <kernel/lock.h>
 
 using namespace std;
 using namespace miosix;
@@ -73,6 +74,7 @@ void Rfm69::setNetworkId(const unsigned short netId)
 
 SendResult Rfm69::sendNow(const void* pkt, int size)
 {
+    DeepSleepLock disableDeepSleep;
     if(size<1 || size>64) return SendResult::SIZE_ERR;
     auto *packet=reinterpret_cast<const unsigned char *>(pkt);
     
@@ -93,6 +95,7 @@ SendResult Rfm69::sendNow(const void* pkt, int size)
 
 SendResult Rfm69::sendAt(const void* pkt, int size, long long when)
 {
+    DeepSleepLock disableDeepSleep;
     if(size<1 || size>64) return SendResult::SIZE_ERR;
     auto *packet=reinterpret_cast<const unsigned char *>(pkt);
     
@@ -133,6 +136,7 @@ SendResult Rfm69::sendAt(const void* pkt, int size, long long when)
 
 RecvResult Rfm69::recv(void* pkt, int size, long long timeout)
 {
+    DeepSleepLock disableDeepSleep;
     auto *packet=reinterpret_cast<unsigned char *>(pkt);
     RecvResult result;
     result.error=RecvResult::TIMEOUT;
